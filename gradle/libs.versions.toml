@@ -1,7 +1,7 @@
 [versions]
-kotlin = "1.6.20-RC2"
-ksp = "1.6.20-RC2-1.0.4"
-ktor = "2.0.0-eap-359"
+kotlin = "1.6.20"
+ksp = "1.6.20-1.0.4"
+ktor = "2.0.0-eap-362"
 kotlinpoet = "1.11.0"
 okhttp = "5.0.0-alpha.6"
 
