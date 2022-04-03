@@ -3,15 +3,20 @@ package retroktor
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
 import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.statement.*
 import retroktor.http.*
 
 suspend fun main() {
   val client = HttpClient(OkHttp) {
     defaultRequest { url("https://api.github.com") }
+    Logging { level = LogLevel.ALL }
+    install(DefaultRequest) {}
+    install(ContentNegotiation) {}
   }
   val github = GithubClient(client)
-  println(github.user("caareem"))
+  println(github.user("careem"))
 }
 
 @RetroKtorClient

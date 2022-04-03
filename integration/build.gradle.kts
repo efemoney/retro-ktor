@@ -12,8 +12,14 @@ kotlin.sourceSets {
 
 dependencies {
   ksp(projects.codegen)
-  implementation(projects.runtime)
+
   implementation(platform(libs.okHttp.bom))
+
+  implementation(projects.runtime)
+  implementation(libs.ktor.serialization)
   implementation(libs.ktor.client.okHttp)
+  implementation(libs.ktor.client.logging)
+  implementation(libs.ktor.client.contentNegotiation)
   implementation("com.squareup.retrofit2:retrofit:2.9.0")
+
 }

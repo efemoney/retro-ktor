@@ -1,8 +1,9 @@
 @file:Suppress("DSL_SCOPE_VIOLATION", "NOTHING_TO_INLINE", "UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
 
-import org.jetbrains.kotlin.gradle.dsl.*
-import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
-import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
 
 plugins {
   alias(libs.plugins.ksp) apply false
@@ -38,23 +39,22 @@ subprojects {
       }
     }
   }
-  pluginManager.withAnyKotlinPlugin {
-    kotlin.configureEachCompilation {
-      kotlinOptions {
-        freeCompilerArgs = freeCompilerArgs + listOf(
-          "-opt-in=kotlin.RequiresOptIn",
-          "-opt-in=kotlin.contracts.ExperimentalContracts",
-          "-opt-in=com.squareup.kotlinpoet.ksp.KotlinPoetKspPreview",
-          "-Xcontext-receivers",
-        )
-      }
+
+  dependencies {
+    configurations.matchingImplementation().configureEach {
+      name(platform(libs.kotlin.bom))
     }
   }
 
-  dependencies {
-    configurations
-      .matchingImplementation()
-      .configureEach { name(platform(libs.kotlin.bom)) }
+  tasks.withType<KotlinCompile<*>>().configureEach {
+    kotlinOptions {
+      freeCompilerArgs = freeCompilerArgs + listOf(
+        "-opt-in=kotlin.RequiresOptIn",
+        "-opt-in=kotlin.contracts.ExperimentalContracts",
+        "-opt-in=com.squareup.kotlinpoet.ksp.KotlinPoetKspPreview",
+        "-Xcontext-receivers",
+      )
+    }
   }
 }
 
@@ -63,6 +63,12 @@ tasks.dependencyUpdates {
 }
 
 // region Dsl
+
+fun PluginManager.withPlugin(plugin: Provider<PluginDependency>, action: Action<AppliedPlugin>) =
+  withPlugin(plugin.get(), action)
+
+fun PluginManager.withPlugin(plugin: PluginDependency, action: Action<AppliedPlugin>) =
+  withPlugin(plugin.pluginId, action)
 
 fun PluginManager.withAnyPlugin(vararg plugins: String, action: Action<AppliedPlugin>) =
   plugins.forEach { withPlugin(it, action) }
@@ -90,25 +96,6 @@ class AppliedKotlinPlugin<T : KotlinProjectExtension>(appliedPlugin: AppliedPlug
   inline val Project.kotlin get() = extensions.getByName<KotlinProjectExtension>("kotlin") as T
 
   inline fun Project.kotlin(action: Action<T>) = extensions.configure("kotlin", action)
-
-  fun T.configureEachTarget(
-    includeMetadata: Boolean = true,
-    action: Action<KotlinTarget>,
-  ) = when (this) {
-    is KotlinSingleTargetExtension -> action.execute(target)
-    is KotlinMultiplatformExtension -> {
-      if (includeMetadata) action.execute(metadata())
-      targets.configureEach(action)
-    }
-    else -> error("")
-  }
-
-  fun T.configureEachCompilation(
-    includeMetadata: Boolean = true,
-    action: Action<KotlinCompilation<KotlinCommonOptions>>
-  ) = configureEachTarget(includeMetadata) {
-    compilations.configureEach(action)
-  }
 }
 
 // endregion
