@@ -16,7 +16,7 @@ import kotlin.reflect.jvm.jvmErasure
 import java.lang.reflect.Array as ReflectArray
 
 internal const val PleaseFileIssue =
-  "\n    Please file an issue at github.com/efemoney/retro-ktor/issues to improve this."
+  "\n    Please file an issue at github.com/efemoney/retro-ktor/issues to improve support."
 
 private val reificationCache = ConcurrentHashMap<KClass<*>, ReificationFunction<*>>(8)
 

@@ -3,10 +3,7 @@ package retroktor.codegen
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
-import com.google.devtools.ksp.symbol.KSAnnotation
-import com.google.devtools.ksp.symbol.KSFunctionDeclaration
-import com.google.devtools.ksp.symbol.KSNode
-import com.google.devtools.ksp.symbol.KSValueParameter
+import com.google.devtools.ksp.symbol.*
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.TypeName
 import com.squareup.kotlinpoet.buildCodeBlock
@@ -41,11 +38,8 @@ interface FunctionProcessingContext : ProcessingContext {
 
   val requestBlock: CodeBlock.Builder
   val urlStringBlock: CodeBlock.Builder
-  val pathBlocks: MutableMap<String, CodeBlock?>
   val headersBlock: CodeBlock.Builder
-  val urlBlock: CodeBlock.Builder
-
-  fun appendHeaderLine(line: String)
+  val paramsBlock: CodeBlock.Builder
 }
 
 interface AnnotationProcessingContext : FunctionProcessingContext {
@@ -54,7 +48,8 @@ interface AnnotationProcessingContext : FunctionProcessingContext {
 
 interface ParameterProcessingContext : FunctionProcessingContext {
   val param: KSValueParameter
-  val paramType: TypeName
+  val paramType: KSType
+  val paramTypeName: TypeName
 }
 
 
@@ -89,44 +84,45 @@ class FunctionProcessingContextImpl(
   override var gotQueryName = false
   override var gotQueryMap = false
 
-  override var requestBlock = CodeBlock.Builder()
   override val urlStringBlock = CodeBlock.builder()
-  override val pathBlocks = mutableMapOf<String, CodeBlock?>()
-  override val headersBlock = CodeBlock.Builder()
-  override val urlBlock = CodeBlock.builder()
+  override val headersBlock get() = preParamsBlock
+  override val paramsBlock = CodeBlock.builder()
+  override val requestBlock get() = postParamsBlock
+
+  private var preParamsBlock = CodeBlock.builder()
+  private var postParamsBlock = CodeBlock.builder()
 
   override fun error(message: String, symbol: KSNode?) = logger.error(message, symbol ?: fn)
-
-  override fun appendHeaderLine(line: String) {
-    val (name, value) = line.split(':')
-    headersBlock.addStatement("%M(%S, %S)", headerFn, name.trim(), value.trim())
-  }
 
   internal fun codeBlock() = buildCodeBlock {
     add("\n")
     if (!returnsUnit) add("return ")
-    add("client.%M%L·{\n", request(), urlStringBlock())
+    add("client.%M%L·{\n", method(), urlStringBlock())
     withIndent {
-      addNonEmpty(headersBlock)
-      addNonEmptyInside("url", urlBlock)
-      addNonEmpty(requestBlock)
+      addNonEmpty(preParamsBlock)
+      addNonEmpty(paramsBlock)
+      addNonEmpty(postParamsBlock)
     }
     add("}")
     if (!returnsHttpResponse && !returnsUnit) add(".%M()", bodyFn)
     add("\n")
   }
 
+  private fun method() = methodFns[method] ?: run {
+    // Unknown http method, first request statement should specify method
+
+    // Update request block
+    preParamsBlock = CodeBlock.builder()
+      .addStatement("method = %T.parse(%S)", HttpMethod::class, method)
+      .add(preParamsBlock.build())
+
+    // Return default request
+    defaultRequestFn
+  }
+
   private fun urlStringBlock() = buildCodeBlock {
     if (hasUrl) urlStringBlock.add("\"%L\"", url)
     if (urlStringBlock.isNotEmpty()) add("(%L)", urlStringBlock.build())
-  }
-
-  private fun request() = requestFns[method] ?: run {
-    // Unknown http method, first request statement should specify method
-    requestBlock = CodeBlock.builder()
-      .addStatement("method = %T.parse(%S)", HttpMethod::class, method)
-      .add(requestBlock.build())
-    defaultRequestFn
   }
 }
 
@@ -142,18 +138,12 @@ class ParameterProcessingContextImpl(
   override val param: KSValueParameter,
 ) : ParameterProcessingContext, FunctionProcessingContext by self {
 
-  override val paramType by lazy { param.type.asTypeName() }
+  override val paramType by lazy { param.type.resolve() }
+  override val paramTypeName by lazy { param.type.asTypeName() }
 
   override fun error(message: String, symbol: KSNode?) = logger.error(message, symbol ?: param)
 }
 
-
-private fun CodeBlock.Builder.addNonEmptyInside(block: String, builder: CodeBlock.Builder) = apply {
-  if (builder.isEmpty()) return@apply
-  add("$block·{\n")
-  withIndent { add(builder.build()) }
-  add("}\n")
-}
 
 private fun CodeBlock.Builder.addNonEmpty(builder: CodeBlock.Builder) = apply {
   if (builder.isNotEmpty()) add(builder.build())

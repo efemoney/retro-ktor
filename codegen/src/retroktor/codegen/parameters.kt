@@ -26,15 +26,20 @@ private val UrlBuilderContextAndParamLambdaType = // URLBuilder.(URLBuilder) -> 
   )
 
 context(Resolver) private val MapType
-  get() = getClassDeclarationByName<Map<String, *>>()?.asStarProjectedType()!!
+  get() = getClassDeclarationByName("kotlin.collections.Map")!!.asStarProjectedType()
 
-context(ParameterProcessingContext) fun parseParameter() {
+context(Resolver) private val ListType
+  get() = getClassDeclarationByName("kotlin.collections.List")!!.asStarProjectedType()
+
+fun ParameterProcessingContext.parseParameter() {
   param.annotations.withEach {
     ifMatches<Url> { parseUrl() }
     ifMatches<Path> { parsePath(it) }
     ifMatches<Query> { parseQuery(it) }
     ifMatches<QueryMap> { parseQueryMap(it) }
     ifMatches<QueryName> { parseQueryName(it) }
+    ifMatches<Header> { parseHeader(it) }
+    ifMatches<HeaderMap> { parseHeaderMap() }
   }
 }
 
@@ -49,13 +54,14 @@ context(ParameterProcessingContext) fun parseUrl() {
 
   gotUrl = true
 
-  when (paramType) {
+  when (paramTypeName) {
     STRING
     -> urlStringBlock.add("%L", paramName)
 
     UrlBuilderContextAndParamLambdaType,
     UrlBuilderContextLambdaTypeName,
-    URLTypeName, UrlTypeName,
+    UrlTypeName,
+    URLTypeName,
     -> requestBlock.addStatement("%M(%L)", urlFn, paramName)
 
     else
@@ -72,7 +78,7 @@ context(ParameterProcessingContext) fun parsePath(path: Path) {
   val name = path.value
 
   if (!hasUrl) return error("@Path can only be used with relative url on @$method")
-  if (paramType.isNullable) return error("Path parameter '$name' must not be null.")
+  if (paramTypeName.isNullable) return error("Path parameter '$name' must not be nullable.")
 
   gotPath = true
 
@@ -82,7 +88,7 @@ context(ParameterProcessingContext) fun parsePath(path: Path) {
   if (name !in urlParams)
     return error("URL '$url' does not contain {$name}.")
 
-  val newUrl = when (paramType) {
+  val newUrl = when (paramTypeName) {
     STRING -> url!!.replace("{$name}", CodeBlock.of("%L", "\$$paramName").toString())
     else -> return error("@Path parameter must be String type. $PleaseFileIssue")
   }
@@ -95,69 +101,105 @@ context(ParameterProcessingContext) fun parseQuery(query: Query) {
   gotQuery = true
 
   val name = query.value
-  val parameterType = param.type.resolve()
-  val parameters = if (query.encoded) "encodedParameters" else "parameters"
+  val parameterFn = if (query.encoded) encodedParameter else parameter
+  val parametersFn = if (query.encoded) encodedParameters else parameters
 
   when {
+    paramType == builtIns.stringType
+    -> paramsBlock.addStatement("%M(%S, %L)", parameterFn, name, paramName)
 
-    parameterType == builtIns.stringType
-    -> urlBlock.addStatement("$parameters.append(%S, $paramName)", name)
+    builtIns.iterableType.isAssignableFrom(paramType)
+    -> paramsBlock.addStatement("%M(%S, %L)", parametersFn, name, paramName)
 
-    builtIns.iterableType.isAssignableFrom(parameterType)
-    -> urlBlock.addStatement("$parameters.appendAll(%S, $paramName)", name)
+    builtIns.arrayType.isAssignableFrom(paramType)
+    -> paramsBlock.addStatement("%M(%S, %L.%M())", parametersFn, name, paramName, toListFn)
 
-    builtIns.arrayType.isAssignableFrom(parameterType)
-    -> urlBlock.addStatement("$parameters.appendAll(%S, $paramName.%M())", name, toListFn)
-
-    else
-    -> return error("Unsupported @Query type: $parameterType. Should be String, List<String> or Array<String>")
+    else -> return error(
+      "Unsupported @Query type: $paramType. Should be String, List<String> or Array<String>(including varargs)"
+    )
   }
 }
 
 context(ParameterProcessingContext) fun parseQueryMap(query: QueryMap) {
   gotQueryMap = true
 
-  val parameterType = param.type.resolve()
-  val parameters = if (query.encoded) "encodedParameters" else "parameters"
+  val parametersFn = if (query.encoded) encodedParameters else parameters
 
   when {
-    MapType.isAssignableFrom(parameterType) -> {
-      val (keyType, valueType) = parameterType.arguments.map { it.type!!.resolve() }
-      if (keyType != builtIns.stringType) return error("@QueryMap map key type must be String.")
+    MapType.isAssignableFrom(paramType) -> {
+      val (keyType, valueType) = paramType.arguments.map { it.type!!.resolve() }
+      if (keyType != builtIns.stringType) return error("@QueryMap key type must be String.")
 
       when {
         valueType == builtIns.stringType
-        -> urlBlock.addStatement("$parameters.%M($paramName)", appendMap)
+          || builtIns.arrayType.isAssignableFrom(valueType)
+          || builtIns.iterableType.isAssignableFrom(valueType)
+        -> paramsBlock.addStatement("%M(%L)", parametersFn, paramName)
 
-        builtIns.iterableType.isAssignableFrom(valueType)
-        -> urlBlock.addStatement("$parameters.%M($paramName)", appendMapList)
-
-        builtIns.arrayType.isAssignableFrom(valueType)
-        -> urlBlock.addStatement("$parameters.%M($paramName)", appendMapArray)
+        else -> return error("@QueryMap value type must be String, List<String> or Array<String>(including varargs)")
       }
     }
-    else -> return error("Unsupported @QueryMap type: $parameterType")
+    else -> return error("Unsupported @QueryMap type: $paramType")
   }
 }
 
 context(ParameterProcessingContext) fun parseQueryName(query: QueryName) {
   gotQueryName = true
 
-  val parameterType = param.type.resolve()
-  val parameters = if (query.encoded) "encodedParameters" else "parameters"
+  val parameterFn = if (query.encoded) encodedParameterName else parameterName
+  val parametersFn = if (query.encoded) encodedParameterNames else parameterNames
 
   when {
 
-    parameterType == builtIns.stringType
-    -> urlBlock.addStatement("$parameters.%M($paramName)", appendName)
+    paramType == builtIns.stringType
+    -> paramsBlock.addStatement("%M(%L)", parameterFn, paramName)
 
-    builtIns.iterableType.isAssignableFrom(parameterType)
-    -> urlBlock.addStatement("$parameters.%M($paramName)", appendNames)
+    builtIns.iterableType.isAssignableFrom(paramType)
+    -> paramsBlock.addStatement("%M(%L)", parametersFn, paramName)
 
-    builtIns.arrayType.isAssignableFrom(parameterType)
-    -> urlBlock.addStatement("$parameters.%M(*$paramName)", appendNames)
+    builtIns.arrayType.isAssignableFrom(paramType)
+    -> paramsBlock.addStatement("%M(%L)", parametersFn, paramName)
 
     else
-    -> return error("Unsupported @QueryName type: $parameterType. Should be String, List<String> or Array<String>")
+    -> return error("Unsupported @QueryName type: $paramType. Should be String, List<String> or Array<String>")
+  }
+}
+
+context(ParameterProcessingContext) fun parseHeader(header: Header) {
+  val name = header.value
+
+  when {
+    paramType == builtIns.stringType
+    -> headersBlock.addStatement("%M(%S, $paramName)", header, name)
+
+    ListType.isAssignableFrom(paramType)
+    -> headersBlock.addStatement("%M(%S, $paramName)", headers, name)
+
+    builtIns.arrayType.isAssignableFrom(paramType)
+    -> headersBlock.addStatement("%M(%S, $paramName)", headers, name)
+
+    else -> return error("Unsupported @Header type: $paramType. $PleaseFileIssue")
+  }
+}
+
+context(ParameterProcessingContext) fun parseHeaderMap() {
+
+  when {
+    MapType.isAssignableFrom(paramType) -> {
+      val (keyType, valueType) = paramType.arguments.map { it.type!!.resolve() }
+      if (keyType != builtIns.stringType) return error("@HeaderMap key type must be String.")
+
+      when {
+        builtIns.arrayType.isAssignableFrom(valueType)
+        -> headersBlock.addStatement("%M($paramName)", headers)
+
+        ListType.isAssignableFrom(valueType)
+        -> headersBlock.addStatement("%M($paramName)", headers)
+
+        valueType == builtIns.stringType
+        -> headersBlock.addStatement("%M($paramName)", headers)
+      }
+    }
+    else -> return error("Unsupported @QueryMap type: $paramType")
   }
 }

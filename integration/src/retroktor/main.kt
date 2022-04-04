@@ -17,6 +17,7 @@ suspend fun main() {
   }
   val github = GithubClient(client)
   println(github.user("careem"))
+  println(github.lexikoBranches())
 }
 
 @RetroKtorClient
@@ -26,14 +27,8 @@ interface GithubClient : SuperGithubClient {
   @Headers("Accept: application/json")
   suspend fun user(@Path("username") username: String): HttpResponse
 
-  @GET("/repos/efemoney/lexiko/branches")
-  override suspend fun lexikoBranches(): HttpResponse
-
-  @POST("/haha/{lol}")
-  suspend fun efemoney(
-    @Path("lol") lolValue: String,
-    @QueryMap filters: Map<String, List<String>>,
-  )
+  @POST("/haha")
+  suspend fun efemoney(@HeaderMap headers: Map<String, String>)
 }
 
 interface SuperGithubClient {
@@ -45,10 +40,10 @@ interface SuperGithubClient {
     @Query("filters") vararg filters: String,
   ): HttpResponse
 
-  @GET("/emojis")
+  @HTTP(method = "DELETE", path = "/emojis")
   suspend fun emojis(
     @Query("filters") filters: List<String>,
-    @QueryName vararg names: String,
+    @Header("X-User-ID") vararg userIds: String,
   )
 
   suspend fun lexikoBranches() = branches("efemoney", "lexiko")

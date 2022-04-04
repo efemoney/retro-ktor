@@ -51,11 +51,11 @@ context(FunctionProcessingContext) fun parseFunctionAnnotations() {
 
 context(FunctionProcessingContext) fun parseFunctionParameters() {
   fn.parameters.forEach {
-    ParameterProcessingContextImpl(it).apply { parseParameter() }
+    ParameterProcessingContextImpl(it).parseParameter()
   }
 
   if (urlParams.isNotEmpty()) {
-    return error("Missing @Path parameters: ${urlParams.joinToString()}")
+    return error("Missing required $method @Path parameters: [${urlParams.joinToString()}]")
   }
 }
 
@@ -79,10 +79,11 @@ context(AnnotationProcessingContext) fun parseMethodAndPath(method: String, valu
 
 context(AnnotationProcessingContext) fun parseHeaders(headers: Array<out String>) {
   headers
-    .ifEmpty { return error("@Headers annotation is empty.") }
+    .ifEmpty { return warn("@Headers annotation is empty.") }
     .forEach { line ->
       if (':' !in line) return error("@Headers value must be in the form 'Name: Value'. Found: '$line'")
-      appendHeaderLine(line)
+      val (name, value) = line.split(':')
+      headersBlock.addStatement("%M(%S, %S)", header, name.trim(), value.trim())
     }
 }
 

@@ -2,11 +2,12 @@ package retroktor.codegen
 
 import com.squareup.kotlinpoet.MemberName
 
+val toListFn = MemberName("kotlin.collections", "toList")
+
 val urlFn = MemberName("io.ktor.client.request", "url")
 val bodyFn = MemberName("io.ktor.client.call", "body")
-val headerFn = MemberName("io.ktor.client.request", "header")
 val defaultRequestFn = MemberName("io.ktor.client.request", "request")
-val requestFns = mapOf(
+val methodFns = mapOf(
   "GET" to MemberName("io.ktor.client.request", "get"),
   "POST" to MemberName("io.ktor.client.request", "post"),
   "PUT" to MemberName("io.ktor.client.request", "put"),
@@ -15,17 +16,14 @@ val requestFns = mapOf(
   "OPTIONS" to MemberName("io.ktor.client.request", "options"),
   "DELETE" to MemberName("io.ktor.client.request", "delete"),
 )
-val valuesOfFn = MemberName("io.ktor.util", "valuesOf")
-val parametersOfFn = MemberName("io.ktor.http", "parametersOf")
 
-
-val emptyList = MemberName("kotlin.collections", "emptyList")
-val toListFn = MemberName("kotlin.collections", "toList")
-val associateWithFn = MemberName("kotlin.collections", "associateWith")
-
-
-val appendMap = MemberName("retroktor.internal", "appendMap")
-val appendMapList = MemberName("retroktor.internal", "appendMapList")
-val appendMapArray = MemberName("retroktor.internal", "appendMapArray")
-val appendName = MemberName("retroktor.internal", "appendName")
-val appendNames = MemberName("retroktor.internal", "appendNames")
+val header = MemberName("retroktor.internal.dsl", "header")
+val headers = MemberName("retroktor.internal.dsl", "headers")
+val parameter = MemberName("retroktor.internal.dsl", "parameter")
+val parameters = MemberName("retroktor.internal.dsl", "parameters")
+val parameterName = MemberName("retroktor.internal.dsl", "parameterName")
+val parameterNames = MemberName("retroktor.internal.dsl", "parameterNames")
+val encodedParameter = MemberName("retroktor.internal.dsl", "encodedParameter")
+val encodedParameters = MemberName("retroktor.internal.dsl", "encodedParameters")
+val encodedParameterName = MemberName("retroktor.internal.dsl", "encodedParameterName")
+val encodedParameterNames = MemberName("retroktor.internal.dsl", "encodedParameterNames")
