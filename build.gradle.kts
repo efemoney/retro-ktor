@@ -1,6 +1,5 @@
 @file:Suppress("DSL_SCOPE_VIOLATION", "NOTHING_TO_INLINE", "UNCHECKED_CAST", "MemberVisibilityCanBePrivate")
 
-import org.jetbrains.kotlin.gradle.dsl.KotlinCompile
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinProjectExtension
@@ -39,21 +38,19 @@ subprojects {
       }
     }
   }
-
+  pluginManager.withAnyKotlinPlugin {
+    kotlin.sourceSets.configureEach {
+      languageSettings {
+        enableLanguageFeature("ContextReceivers")
+        optIn("kotlin.RequiresOptIn")
+        optIn("kotlin.contracts.ExperimentalContracts")
+        optIn("com.squareup.kotlinpoet.ksp.KotlinPoetKspPreview")
+      }
+    }
+  }
   dependencies {
     configurations.matchingImplementation().configureEach {
       name(platform(libs.kotlin.bom))
-    }
-  }
-
-  tasks.withType<KotlinCompile<*>>().configureEach {
-    kotlinOptions {
-      freeCompilerArgs = freeCompilerArgs + listOf(
-        "-opt-in=kotlin.RequiresOptIn",
-        "-opt-in=kotlin.contracts.ExperimentalContracts",
-        "-opt-in=com.squareup.kotlinpoet.ksp.KotlinPoetKspPreview",
-        "-Xcontext-receivers",
-      )
     }
   }
 }
@@ -78,6 +75,7 @@ fun PluginManager.withAnyKotlinPlugin(action: Action<AppliedKotlinPlugin<KotlinP
     "org.jetbrains.kotlin.js",
     "org.jetbrains.kotlin.jvm",
     "org.jetbrains.kotlin.android",
+    "org.jetbrains.kotlin.multiplatform",
   ) { action.execute(AppliedKotlinPlugin(this)) }
 }
 
