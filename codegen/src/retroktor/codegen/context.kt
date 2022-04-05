@@ -1,5 +1,6 @@
 package retroktor.codegen
 
+import com.google.devtools.ksp.processing.JvmPlatformInfo
 import com.google.devtools.ksp.processing.KSPLogger
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
@@ -15,8 +16,11 @@ import io.ktor.http.*
 interface ProcessingContext : Resolver, KSPLogger {
   val resolver: Resolver
   val logger: KSPLogger
+  val types: Types
 
   val generateLazyCtors: Boolean
+
+  val isJvm: Boolean
 }
 
 interface FunctionProcessingContext : ProcessingContext {
@@ -40,6 +44,7 @@ interface FunctionProcessingContext : ProcessingContext {
 
   val requestBlock: CodeBlock.Builder
   val urlStringBlock: CodeBlock.Builder
+  val urlBlock: CodeBlock.Builder
   val headersBlock: CodeBlock.Builder
   val paramsBlock: CodeBlock.Builder
 }
@@ -60,8 +65,13 @@ context(SymbolProcessorEnvironment) class ProcessingContextImpl(
   override val logger: KSPLogger,
 ) : ProcessingContext, Resolver by resolver, KSPLogger by logger {
 
+  override val types = Types()
+
   override val generateLazyCtors: Boolean
     get() = options["retroktor.client.lazyConstructors"]?.toBoolean() ?: true
+
+  override val isJvm: Boolean
+    get() = platforms.any { it is JvmPlatformInfo }
 }
 
 context(ProcessingContext) class FunctionProcessingContextImpl(
@@ -89,6 +99,7 @@ context(ProcessingContext) class FunctionProcessingContextImpl(
   override var gotQueryMap = false
 
   override val urlStringBlock = CodeBlock.builder()
+  override val urlBlock = CodeBlock.builder()
   override val headersBlock get() = preParamsBlock
   override val paramsBlock = CodeBlock.builder()
   override val requestBlock get() = postParamsBlock
@@ -103,6 +114,7 @@ context(ProcessingContext) class FunctionProcessingContextImpl(
     if (!returnsUnit) add("return ")
     add("client.%M%L·{\n", method(), urlStringBlock())
     withIndent {
+      addNonEmpty(urlBlock)
       addNonEmpty(preParamsBlock)
       addNonEmpty(paramsBlock)
       addNonEmpty(postParamsBlock)

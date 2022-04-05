@@ -2,8 +2,6 @@ package retroktor.codegen
 
 import com.squareup.kotlinpoet.MemberName
 
-val toListFn = MemberName("kotlin.collections", "toList")
-
 val urlFn = MemberName("io.ktor.client.request", "url")
 val bodyFn = MemberName("io.ktor.client.call", "body")
 val defaultRequestFn = MemberName("io.ktor.client.request", "request")
