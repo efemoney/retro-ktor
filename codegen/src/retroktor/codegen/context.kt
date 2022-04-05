@@ -15,6 +15,8 @@ import io.ktor.http.*
 interface ProcessingContext : Resolver, KSPLogger {
   val resolver: Resolver
   val logger: KSPLogger
+
+  val generateLazyCtors: Boolean
 }
 
 interface FunctionProcessingContext : ProcessingContext {
@@ -53,14 +55,16 @@ interface ParameterProcessingContext : FunctionProcessingContext {
 }
 
 
-context(SymbolProcessorEnvironment)
-class ProcessingContextImpl(
+context(SymbolProcessorEnvironment) class ProcessingContextImpl(
   override val resolver: Resolver,
-  override val logger: KSPLogger
-) : ProcessingContext, Resolver by resolver, KSPLogger by logger
+  override val logger: KSPLogger,
+) : ProcessingContext, Resolver by resolver, KSPLogger by logger {
 
-context(ProcessingContext)
-class FunctionProcessingContextImpl(
+  override val generateLazyCtors: Boolean
+    get() = options["retroktor.client.lazyConstructors"]?.toBoolean() ?: true
+}
+
+context(ProcessingContext) class FunctionProcessingContextImpl(
   override val fn: KSFunctionDeclaration,
 ) : FunctionProcessingContext, ProcessingContext by self {
 
@@ -126,15 +130,13 @@ class FunctionProcessingContextImpl(
   }
 }
 
-context(FunctionProcessingContext)
-class AnnotationProcessingContextImpl(
+context(FunctionProcessingContext) class AnnotationProcessingContextImpl(
   override val ann: KSAnnotation,
 ) : AnnotationProcessingContext, FunctionProcessingContext by self {
   override fun error(message: String, symbol: KSNode?) = logger.error(message, symbol ?: ann)
 }
 
-context(FunctionProcessingContext)
-class ParameterProcessingContextImpl(
+context(FunctionProcessingContext) class ParameterProcessingContextImpl(
   override val param: KSValueParameter,
 ) : ParameterProcessingContext, FunctionProcessingContext by self {
 

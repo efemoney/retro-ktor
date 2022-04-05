@@ -73,7 +73,7 @@ private class ReificationFunction<T : Annotation>(annotationKClass: KClass<T>) :
     "kotlin.DoubleArray" -> (this as List<Double>).toDoubleArray()
     else -> {
       val componentCls = kls.java.componentType
-      val componentKls = kls.java.componentType.kotlin
+      val componentKls = componentCls.kotlin
       val arr = ReflectArray.newInstance(componentCls, size) as Array<Any?>
       for (i in indices) arr[i] = actualValue(get(i), componentKls)
       arr

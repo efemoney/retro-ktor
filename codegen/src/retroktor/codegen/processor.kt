@@ -60,6 +60,7 @@ context(ProcessingContext) private fun KSClassDeclaration.generateFile(generator
   FileSpec
     .builder(packageName.asString(), implName)
     .addAnnotation(fileSuppressAnnotation)
+    .apply { if (generateLazyCtors) addFunction(implLambdaFunSpec()) }
     .addFunction(implFunSpec())
     .addType(implTypeSpec())
     .build()
@@ -72,20 +73,34 @@ context(ProcessingContext) private fun KSClassDeclaration.implFunSpec(): FunSpec
     .addAnnotation(RetroKtorGenerated::class)
     .returns(toClassName())
     .addParameter(ParameterSpec("client", HttpClient::class.asTypeName()))
+    .addCode("return %L { client }", implName)
+    .addOriginatingKSFile(containingFile!!)
+    .build()
+}
+
+context(ProcessingContext) private fun KSClassDeclaration.implLambdaFunSpec(): FunSpec {
+  return FunSpec
+    .builder(simpleName.asString())
+    .addAnnotation(RetroKtorGenerated::class)
+    .returns(toClassName())
+    .addParameter(ParameterSpec("client", ClientLambdaType))
     .addCode("return %L(client)", implName)
     .addOriginatingKSFile(containingFile!!)
     .build()
 }
 
 context(ProcessingContext) private fun KSClassDeclaration.implTypeSpec(): TypeSpec {
-  val clientKls = HttpClient::class
   return TypeSpec.classBuilder(implName)
     .addAnnotation(RetroKtorGenerated::class)
     .addModifiers(PRIVATE)
     .addSuperinterface(toClassName())
     .addSuperinterface(RetroKtorClientImpl::class)
-    .primaryConstructor(FunSpec.constructorBuilder().addParameter("client", clientKls).build())
-    .addProperty(PropertySpec.builder("client", clientKls, PRIVATE).initializer("client").build())
+    .primaryConstructor(FunSpec.constructorBuilder().addParameter("client", ClientLambdaType).build())
+    .addProperty(
+      PropertySpec.builder("client", HttpClient::class, PRIVATE)
+        .delegate("lazy(client)")
+        .build()
+    )
     .addFunctions(implFunctions())
     .addOriginatingKSFile(containingFile!!)
     .build()
@@ -105,3 +120,5 @@ context(ProcessingContext) private fun KSClassDeclaration.implFunctions(): Itera
     }
     .asIterable()
 }
+
+private val ClientLambdaType = LambdaTypeName.get(returnType = HttpClient::class.asTypeName())

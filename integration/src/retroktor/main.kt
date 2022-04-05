@@ -15,7 +15,7 @@ suspend fun main() {
     install(DefaultRequest) {}
     install(ContentNegotiation) {}
   }
-  val github = GithubClient(client)
+  val github = GithubClient { client }
   println(github.user("careem"))
   println(github.lexikoBranches())
 }
