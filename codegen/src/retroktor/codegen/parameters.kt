@@ -24,14 +24,14 @@ private val UrlBuilderReceiverAndParamLambdaTypeName = // URLBuilder.(URLBuilder
 fun ParameterProcessingContext.parseParameter() {
   param.annotations.withEach {
     ifMatches<Url> { parseUrl() }
-    ifMatches<Path> { parsePath(it) }
-    ifMatches<Query> { parseQuery(it) }
-    ifMatches<QueryMap> { parseQueryMap(it) }
-    ifMatches<QueryName> { parseQueryName(it) }
-    ifMatches<Header> { parseHeader(it) }
+    ifMatches<Path> { parsePath(it.value, it.encoded) }
+    ifMatches<Query> { parseQuery(it.value, it.encoded) }
+    ifMatches<QueryMap> { parseQueryMap(it.encoded) }
+    ifMatches<QueryName> { parseQueryName(it.encoded) }
+    ifMatches<Header> { parseHeader(it.value) }
     ifMatches<HeaderMap> { parseHeaderMap() }
-    ifMatches<Field> { parseField(it) }
-    ifMatches<FieldMap> { parseFieldMap(it) }
+    ifMatches<Field> { parseField(it.value, it.encoded) }
+    ifMatches<FieldMap> { parseFieldMap(it.encoded) }
   }
 }
 
@@ -63,13 +63,11 @@ context(ParameterProcessingContext) fun parseUrl() {
   }
 }
 
-context(ParameterProcessingContext) fun parsePath(path: Path) {
+context(ParameterProcessingContext) fun parsePath(name: String, encoded: Boolean) {
   if (gotQuery) return error("A @Path parameter must not come after a @Query.")
   if (gotQueryName) return error("A @Path parameter must not come after a @QueryName.")
   if (gotQueryMap) return error("A @Path parameter must not come after a @QueryMap.")
   if (gotUrl) return error("@Path parameters may not be used with @Url.")
-
-  val name = path.value
 
   if (!hasUrl) return error("@Path can only be used with relative url on @$method")
   if (paramType.isMarkedNullable) return error("Path parameter '$name' must not be nullable.")
@@ -91,12 +89,11 @@ context(ParameterProcessingContext) fun parsePath(path: Path) {
   urlParams = urlParams - name
 }
 
-context(ParameterProcessingContext) fun parseQuery(query: Query) {
+context(ParameterProcessingContext) fun parseQuery(name: String, encoded: Boolean) {
   gotQuery = true
 
-  val name = query.value
-  val parameterFn = if (query.encoded) encodedParameter else parameter
-  val parametersFn = if (query.encoded) encodedParameters else parameters
+  val parameterFn = if (encoded) encodedParameter else parameter
+  val parametersFn = if (encoded) encodedParameters else parameters
 
   when {
     paramType == types.stringType
@@ -112,10 +109,10 @@ context(ParameterProcessingContext) fun parseQuery(query: Query) {
   }
 }
 
-context(ParameterProcessingContext) fun parseQueryMap(query: QueryMap) {
+context(ParameterProcessingContext) fun parseQueryMap(encoded: Boolean) {
   gotQueryMap = true
 
-  val parametersFn = if (query.encoded) encodedParameters else parameters
+  val parametersFn = if (encoded) encodedParameters else parameters
 
   when {
     types.mapType.isAssignableFrom(paramType) -> {
@@ -135,11 +132,11 @@ context(ParameterProcessingContext) fun parseQueryMap(query: QueryMap) {
   }
 }
 
-context(ParameterProcessingContext) fun parseQueryName(query: QueryName) {
+context(ParameterProcessingContext) fun parseQueryName(encoded: Boolean) {
   gotQueryName = true
 
-  val parameterFn = if (query.encoded) encodedParameterName else parameterName
-  val parametersFn = if (query.encoded) encodedParameterNames else parameterNames
+  val parameterFn = if (encoded) encodedParameterName else parameterName
+  val parametersFn = if (encoded) encodedParameterNames else parameterNames
 
   when {
 
@@ -155,8 +152,7 @@ context(ParameterProcessingContext) fun parseQueryName(query: QueryName) {
   }
 }
 
-context(ParameterProcessingContext) fun parseHeader(header: Header) {
-  val name = header.value
+context(ParameterProcessingContext) fun parseHeader(name: String) {
 
   when {
     paramType == types.stringType
@@ -190,15 +186,12 @@ context(ParameterProcessingContext) fun parseHeaderMap() {
   }
 }
 
-context(ParameterProcessingContext) fun parseField(field: Field) {
+context(ParameterProcessingContext) fun parseField(name: String, encoded: Boolean) {
   if (!isFormUrlEncoded) {
     return error(
       "@Field parameters can only be used with form encoding. Did you forget to annotate with @FormUrlEncoded?"
     )
   }
-
-  val name = field.value
-  val encoded = field.encoded
 
   gotField = true
 
@@ -219,9 +212,9 @@ context(ParameterProcessingContext) fun parseField(field: Field) {
   }
 }
 
-context(ParameterProcessingContext) fun parseFieldMap(field: FieldMap) {
+context(ParameterProcessingContext) fun parseFieldMap(encoded: Boolean) {
 
-  val parametersFn = if (field.encoded) encodedParameters else parameters
+  val parametersFn = if (encoded) encodedParameters else parameters
 
   when {
     types.mapType.isAssignableFrom(paramType) -> {

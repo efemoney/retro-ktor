@@ -11,7 +11,7 @@ kotlin.sourceSets {
 }
 
 ksp {
-  arg("retroktor.client.lazyConstructors", "false")
+  arg("retroktor.client.lazyConstructors", "true")
 }
 
 dependencies {
