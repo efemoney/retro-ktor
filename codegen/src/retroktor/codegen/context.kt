@@ -19,6 +19,7 @@ interface ProcessingContext : Resolver, KSPLogger {
   val types: Types
 
   val generateLazyCtors: Boolean
+  val clientAnnotationSearchInDepth: Boolean
 
   val isJvm: Boolean
 }
@@ -47,6 +48,7 @@ interface FunctionProcessingContext : ProcessingContext {
   val urlBlock: CodeBlock.Builder
   val headersBlock: CodeBlock.Builder
   val paramsBlock: CodeBlock.Builder
+  val formBodyBlock: CodeBlock.Builder
 }
 
 interface AnnotationProcessingContext : FunctionProcessingContext {
@@ -69,6 +71,9 @@ context(SymbolProcessorEnvironment) class ProcessingContextImpl(
 
   override val generateLazyCtors: Boolean
     get() = options["retroktor.client.lazyConstructors"]?.toBoolean() ?: true
+
+  override val clientAnnotationSearchInDepth: Boolean
+    get() = options["retroktor.client.searchLocalOrAnonymousClasses"]?.toBoolean() ?: false
 
   override val isJvm: Boolean
     get() = platforms.any { it is JvmPlatformInfo }
@@ -99,13 +104,11 @@ context(ProcessingContext) class FunctionProcessingContextImpl(
   override var gotQueryMap = false
 
   override val urlStringBlock = CodeBlock.builder()
-  override val urlBlock = CodeBlock.builder()
-  override val headersBlock get() = preParamsBlock
+  override var urlBlock = CodeBlock.builder()
+  override val headersBlock = CodeBlock.builder()
   override val paramsBlock = CodeBlock.builder()
-  override val requestBlock get() = postParamsBlock
-
-  private var preParamsBlock = CodeBlock.builder()
-  private var postParamsBlock = CodeBlock.builder()
+  override val formBodyBlock = CodeBlock.builder()
+  override val requestBlock = CodeBlock.builder()
 
   override fun error(message: String, symbol: KSNode?) = logger.error(message, symbol ?: fn)
 
@@ -115,9 +118,19 @@ context(ProcessingContext) class FunctionProcessingContextImpl(
     add("client.%M%L·{\n", method(), urlStringBlock())
     withIndent {
       addNonEmpty(urlBlock)
-      addNonEmpty(preParamsBlock)
+      addNonEmpty(headersBlock)
       addNonEmpty(paramsBlock)
-      addNonEmpty(postParamsBlock)
+      val blockFn = when {
+        isFormUrlEncoded -> formUrlBody
+        isMultipart -> multipartBody
+        else -> null
+      }
+      if (blockFn != null && formBodyBlock.isNotEmpty()) {
+        beginControlFlow("%M", blockFn)
+        add(formBodyBlock.build())
+        endControlFlow()
+      }
+      addNonEmpty(requestBlock)
     }
     add("}")
     if (!returnsHttpResponse && !returnsUnit) add(".%M()", bodyFn)
@@ -125,12 +138,11 @@ context(ProcessingContext) class FunctionProcessingContextImpl(
   }
 
   private fun method() = methodFns[method] ?: run {
-    // Unknown http method, first request statement should specify method
-
-    // Update request block
-    preParamsBlock = CodeBlock.builder()
+    // Unknown http method, first statement should specify method.
+    //  Update url block to include method
+    urlBlock = CodeBlock.builder()
       .addStatement("method = %T.parse(%S)", HttpMethod::class, method)
-      .add(preParamsBlock.build())
+      .add(urlBlock.build())
 
     // Return default request
     defaultRequestFn

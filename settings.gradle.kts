@@ -12,8 +12,8 @@ dependencyResolutionManagement {
   repositories {
     mavenCentral()
     google()
-    maven("https://maven.pkg.jetbrains.space/public/p/ktor/eap")
   }
+  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 }
 
 gradle.beforeProject {

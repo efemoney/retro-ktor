@@ -15,6 +15,8 @@ val methodFns = mapOf(
   "DELETE" to MemberName("io.ktor.client.request", "delete"),
 )
 
+val formUrlBody = MemberName("retroktor.internal.dsl", "formUrlBody")
+val multipartBody = MemberName("retroktor.internal.dsl", "multipartBody")
 val header = MemberName("retroktor.internal.dsl", "header")
 val headers = MemberName("retroktor.internal.dsl", "headers")
 val parameter = MemberName("retroktor.internal.dsl", "parameter")

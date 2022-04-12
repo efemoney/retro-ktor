@@ -13,9 +13,12 @@ plugins {
 
 subprojects {
   pluginManager.withPlugin("java") {
-    the<JavaPluginExtension>().sourceSets.configureEach {
-      java.setSrcDirs(listOf(simpleName(name, "src")))
-      resources.setSrcDirs(listOf(simpleName(name, "resources")))
+    configure<JavaPluginExtension> {
+      toolchain.languageVersion.set(JavaLanguageVersion.of(11))
+      sourceSets.configureEach {
+        java.setSrcDirs(listOf(simpleName(name, "src")))
+        resources.setSrcDirs(listOf(simpleName(name, "resources")))
+      }
     }
   }
   pluginManager.withKotlinJvm {

@@ -23,7 +23,7 @@ context(SymbolProcessorEnvironment) class RetroKtorProcessor : SymbolProcessor {
 
   override fun process(resolver: Resolver): List<KSAnnotated> {
     with(ProcessingContextImpl(resolver, logger)) {
-      getSymbolsWithAnnotation(RetroKtorClient::class.qualifiedName!!)
+      getSymbolsWithAnnotation(RetroKtorClient::class.qualifiedName!!, inDepth = clientAnnotationSearchInDepth)
         .filter { it.isValidClientInterface() }
         .forEach { (it as KSClassDeclaration).generateFile(codeGenerator) }
     }

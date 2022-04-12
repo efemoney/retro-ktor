@@ -30,6 +30,8 @@ fun ParameterProcessingContext.parseParameter() {
     ifMatches<QueryName> { parseQueryName(it) }
     ifMatches<Header> { parseHeader(it) }
     ifMatches<HeaderMap> { parseHeaderMap() }
+    ifMatches<Field> { parseField(it) }
+    ifMatches<FieldMap> { parseFieldMap(it) }
   }
 }
 
@@ -185,5 +187,56 @@ context(ParameterProcessingContext) fun parseHeaderMap() {
       }
     }
     else -> return error("Unsupported @QueryMap type: $paramType")
+  }
+}
+
+context(ParameterProcessingContext) fun parseField(field: Field) {
+  if (!isFormUrlEncoded) {
+    return error(
+      "@Field parameters can only be used with form encoding. Did you forget to annotate with @FormUrlEncoded?"
+    )
+  }
+
+  val name = field.value
+  val encoded = field.encoded
+
+  gotField = true
+
+  val parameterFn = if (encoded) encodedParameter else parameter
+  val parametersFn = if (encoded) encodedParameters else parameters
+
+  when {
+    paramType == types.stringType
+    -> formBodyBlock.addStatement("%M(%S, %L)", parameterFn, name, paramName)
+
+    types.iterableType.isAssignableFrom(paramType)
+      || types.arrayType.isAssignableFrom(paramType)
+    -> formBodyBlock.addStatement("%M(%S, %L)", parametersFn, name, paramName)
+
+    else -> return error(
+      "Unsupported @Field type: $paramType. Should be String, List<String> or Array<String>(including varargs)"
+    )
+  }
+}
+
+context(ParameterProcessingContext) fun parseFieldMap(field: FieldMap) {
+
+  val parametersFn = if (field.encoded) encodedParameters else parameters
+
+  when {
+    types.mapType.isAssignableFrom(paramType) -> {
+      val (keyType, valueType) = paramType.arguments.map { it.type!!.resolve() }
+      if (keyType != types.stringType) return error("@FieldMap key type must be String.")
+
+      when {
+        valueType == types.stringType
+          || types.arrayType.isAssignableFrom(valueType)
+          || types.iterableType.isAssignableFrom(valueType)
+        -> formBodyBlock.addStatement("%M(%L)", parametersFn, paramName)
+
+        else -> return error("@FieldMap value type must be String, List<String> or Array<String>(including varargs)")
+      }
+    }
+    else -> return error("Unsupported @FieldMap type: $paramType")
   }
 }

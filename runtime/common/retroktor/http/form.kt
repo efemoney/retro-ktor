@@ -58,10 +58,7 @@ annotation class FormUrlEncoded
 @MustBeDocumented
 @Target(VALUE_PARAMETER)
 @Retention(RUNTIME)
-annotation class Field(
-  val value: String,
-  val encoded: Boolean = false
-)
+annotation class Field(val value: String, val encoded: Boolean = false)
 
 
 /**
