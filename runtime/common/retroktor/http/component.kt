@@ -51,10 +51,7 @@ annotation class Url
 @MustBeDocumented
 @Target(VALUE_PARAMETER)
 @Retention(RUNTIME)
-annotation class Path(
-  val value: String,
-  val encoded: Boolean = false,
-)
+annotation class Path(val value: String, val encoded: Boolean = false)
 
 
 /**

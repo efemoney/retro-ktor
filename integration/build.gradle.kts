@@ -10,10 +10,6 @@ kotlin.sourceSets {
   test { kotlin.srcDir("$buildDir/generated/ksp/test/kotlin") }
 }
 
-ksp {
-  arg("retroktor.client.lazyConstructors", "true")
-}
-
 dependencies {
   ksp(projects.codegen)
 

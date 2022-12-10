@@ -6,8 +6,10 @@ import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.statement.*
+import io.ktor.http.*
 import retroktor.http.*
-import java.net.URL
+import retroktor.http.Headers
+import retroktor.http.Url
 
 suspend fun main() {
   val client = HttpClient(OkHttp) {
@@ -17,7 +19,7 @@ suspend fun main() {
     install(ContentNegotiation) {}
   }
   val github = GithubClient(client)
-  println(github.user(URL("/users/careem")))
+  println(github.user { })
   println(github.lexikoBranches())
 }
 
@@ -26,7 +28,7 @@ interface GithubClient : SuperGithubClient {
 
   @GET
   @Headers("Accept: application/json")
-  suspend fun user(@Url url: URL): HttpResponse
+  suspend fun user(@Url url: URLBuilder.() -> Unit): HttpResponse
 
   @POST("/haha")
   suspend fun efemoney(@HeaderMap headers: Map<String, String>)

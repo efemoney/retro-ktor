@@ -8,7 +8,7 @@ plugins {
   alias(libs.plugins.ksp) apply false
   alias(libs.plugins.kotlin.jvm) apply false
   alias(libs.plugins.kotlin.multiplatform) apply false
-  id("com.github.ben-manes.versions") version "0.42.0"
+  id("com.github.ben-manes.versions") version "0.44.0"
 }
 
 subprojects {

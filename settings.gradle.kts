@@ -1,3 +1,5 @@
+@file:Suppress("UnstableApiUsage")
+
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
@@ -15,6 +17,8 @@ dependencyResolutionManagement {
   }
   repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 }
+
+rootProject.name = "retro-ktor"
 
 gradle.beforeProject {
   group = "dev.efemoney"

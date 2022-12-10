@@ -17,6 +17,7 @@ interface ProcessingContext : Resolver, KSPLogger {
   val resolver: Resolver
   val logger: KSPLogger
   val types: Types
+  val typeNames: TypeNames
 
   val generateLazyCtors: Boolean
   val clientAnnotationSearchInDepth: Boolean
@@ -68,6 +69,8 @@ context(SymbolProcessorEnvironment) class ProcessingContextImpl(
 ) : ProcessingContext, Resolver by resolver, KSPLogger by logger {
 
   override val types = Types()
+
+  override val typeNames = TypeNames()
 
   override val generateLazyCtors: Boolean
     get() = options["retroktor.client.lazyConstructors"]?.toBoolean() ?: true
@@ -164,7 +167,12 @@ context(FunctionProcessingContext) class ParameterProcessingContextImpl(
   override val param: KSValueParameter,
 ) : ParameterProcessingContext, FunctionProcessingContext by self {
 
-  override val paramType by lazy { param.type.resolve() }
+  override val paramType by lazy {
+    when {
+      param.isVararg -> types.arrayType.replace(listOf(getTypeArgument(param.type, Variance.INVARIANT)))
+      else -> param.type.resolve()
+    }
+  }
   override val paramTypeName by lazy { param.type.asTypeName() }
 
   override fun error(message: String, symbol: KSNode?) = logger.error(message, symbol ?: param)

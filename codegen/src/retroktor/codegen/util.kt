@@ -97,25 +97,21 @@ internal val KSClassDeclaration.hierarchy: Sequence<KSClassDeclaration>
     }
   }.distinct()
 
-context(ProcessingContext) internal val KSFunctionDeclaration.parametersAsSpecs
-  get() = parameters.map {
-    val name = it.name!!.asString()
-    if (it.isVararg && builtIns.arrayType.isAssignableFrom(it.type.resolve())) {
-      ParameterSpec(name, it.type.resolve().arguments.single().type!!.asTypeName(), KModifier.VARARG)
-    } else {
-      ParameterSpec(name, it.type.asTypeName())
-    }
-  }
+context(ProcessingContext) internal fun List<KSValueParameter>.toParameterSpecs() = map {
+  val modifiers = if (it.isVararg) listOf(KModifier.VARARG) else emptyList()
+  ParameterSpec(it.name!!.asString(), it.type.asTypeName(), modifiers)
+}
 
-fun KSTypeReference.asTypeName() = when (val element = element) {
+context(ProcessingContext) internal fun KSTypeReference.asTypeName(): TypeName = when (val element = element) {
   is KSCallableReference -> element.asTypeName()
   else -> resolve().toTypeName()
 }
 
-fun KSCallableReference.asTypeName(): TypeName = LambdaTypeName.get(
+// We are not working with properties so most callable references we encounter should be lambdas
+context(ProcessingContext) internal fun KSCallableReference.asTypeName(): TypeName = LambdaTypeName.get(
   receiver = receiverType?.asTypeName(),
   returnType = returnType.asTypeName(),
-  parameters = functionParameters.map { ParameterSpec.unnamed(it.type.asTypeName()) },
+  parameters = functionParameters.toParameterSpecs(),
 )
 
 /** Like [Sequence.forEach] except with the item in scope of [action] */

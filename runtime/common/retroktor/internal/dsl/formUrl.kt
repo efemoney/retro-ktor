@@ -22,81 +22,81 @@ internal class FormUrlBodyBuilderImpl : FormUrlBodyBuilder {
 }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  inline fun HttpRequestBuilder.formUrlBody(builder: FormUrlBodyBuilder.() -> Unit) {
+@RetroKtorDsl
+inline fun HttpRequestBuilder.formUrlBody(builder: FormUrlBodyBuilder.() -> Unit) {
   setBody(FormDataContent(FormUrlBodyBuilderImpl().apply(builder).encodedParameters.build()))
 }
 
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  inline fun FormUrlBodyBuilder.parameter(name: String, value: Any?) {
+@RetroKtorDsl
+inline fun FormUrlBodyBuilder.parameter(name: String, value: Any?) {
   if (value != null) parameters.append(name, value.toString())
 }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  inline fun FormUrlBodyBuilder.parameters(name: String, values: List<Any?>) {
+@RetroKtorDsl
+inline fun FormUrlBodyBuilder.parameters(name: String, values: List<Any?>) {
   if (values.isNotEmpty()) parameters.appendAll(name, values.mapNotNull { it?.toString() })
 }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  inline fun FormUrlBodyBuilder.parameters(name: String, values: Array<out Any?>) {
+@RetroKtorDsl
+inline fun FormUrlBodyBuilder.parameters(name: String, values: Array<out Any?>) {
   if (values.isNotEmpty()) parameters.appendAll(name, values.mapNotNull { it?.toString() })
 }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  @JvmName("parametersMap")
-  inline fun FormUrlBodyBuilder.parameters(map: Map<String, Any?>) =
+@RetroKtorDsl
+@JvmName("parametersMap")
+inline fun FormUrlBodyBuilder.parameters(map: Map<String, Any?>) =
   map.forEach { (name, value) -> parameter(name, value) }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  @JvmName("parametersMapOfList")
-  inline fun FormUrlBodyBuilder.parameters(map: Map<String, List<Any?>>) =
+@RetroKtorDsl
+@JvmName("parametersMapOfList")
+inline fun FormUrlBodyBuilder.parameters(map: Map<String, List<Any?>>) =
   map.forEach { (name, value) -> parameters(name, value) }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  @JvmName("parametersMapOfArray")
-  inline fun FormUrlBodyBuilder.parameters(map: Map<String, Array<out Any?>>) =
+@RetroKtorDsl
+@JvmName("parametersMapOfArray")
+inline fun FormUrlBodyBuilder.parameters(map: Map<String, Array<out Any?>>) =
   map.forEach { (name, value) -> parameters(name, value) }
 
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  inline fun FormUrlBodyBuilder.encodedParameter(name: String, value: Any?) {
+@RetroKtorDsl
+inline fun FormUrlBodyBuilder.encodedParameter(name: String, value: Any?) {
   if (value != null) encodedParameters.append(name, value.toString())
 }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  inline fun FormUrlBodyBuilder.encodedParameters(name: String, values: List<Any?>) {
+@RetroKtorDsl
+inline fun FormUrlBodyBuilder.encodedParameters(name: String, values: List<Any?>) {
   if (values.isNotEmpty()) encodedParameters.appendAll(name, values.mapNotNull { it?.toString() })
 }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  inline fun FormUrlBodyBuilder.encodedParameters(name: String, values: Array<out Any?>) {
+@RetroKtorDsl
+inline fun FormUrlBodyBuilder.encodedParameters(name: String, values: Array<out Any?>) {
   if (values.isNotEmpty()) encodedParameters.appendAll(name, values.mapNotNull { it?.toString() })
 }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  @JvmName("encodedParametersMap")
-  inline fun FormUrlBodyBuilder.encodedParameters(map: Map<String, Any?>) =
+@RetroKtorDsl
+@JvmName("encodedParametersMap")
+inline fun FormUrlBodyBuilder.encodedParameters(map: Map<String, Any?>) =
   map.forEach { (name, value) -> encodedParameter(name, value) }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  @JvmName("encodedParametersMapOfList")
-  inline fun FormUrlBodyBuilder.encodedParameters(map: Map<String, List<Any?>>) =
+@RetroKtorDsl
+@JvmName("encodedParametersMapOfList")
+inline fun FormUrlBodyBuilder.encodedParameters(map: Map<String, List<Any?>>) =
   map.forEach { (name, value) -> encodedParameters(name, value) }
 
 context(RetroKtorClientImpl)
-  @RetroKtorDsl
-  @JvmName("encodedParametersMapOfArray")
-  inline fun FormUrlBodyBuilder.encodedParameters(map: Map<String, Array<out Any?>>) =
+@RetroKtorDsl
+@JvmName("encodedParametersMapOfArray")
+inline fun FormUrlBodyBuilder.encodedParameters(map: Map<String, Array<out Any?>>) =
   map.forEach { (name, value) -> encodedParameters(name, value) }
